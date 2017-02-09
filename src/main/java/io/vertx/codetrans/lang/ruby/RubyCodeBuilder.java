@@ -2,25 +2,25 @@ package io.vertx.codetrans.lang.ruby;
 
 import com.sun.source.tree.LambdaExpressionTree;
 import io.vertx.codegen.Case;
-import io.vertx.codegen.type.TypeInfo;
 import io.vertx.codegen.type.ApiTypeInfo;
 import io.vertx.codegen.type.ClassTypeInfo;
 import io.vertx.codegen.type.EnumTypeInfo;
 import io.vertx.codegen.type.ParameterizedTypeInfo;
+import io.vertx.codegen.type.TypeInfo;
 import io.vertx.codegen.type.TypeReflectionFactory;
-import io.vertx.codetrans.RenderMode;
-import io.vertx.codetrans.expression.ApiTypeModel;
 import io.vertx.codetrans.CodeBuilder;
 import io.vertx.codetrans.CodeModel;
 import io.vertx.codetrans.CodeWriter;
+import io.vertx.codetrans.MethodModel;
+import io.vertx.codetrans.RenderMode;
+import io.vertx.codetrans.RunnableCompilationUnit;
+import io.vertx.codetrans.expression.ApiTypeModel;
 import io.vertx.codetrans.expression.EnumExpressionModel;
 import io.vertx.codetrans.expression.EnumFieldExpressionModel;
 import io.vertx.codetrans.expression.ExpressionModel;
+import io.vertx.codetrans.expression.LambdaExpressionModel;
 import io.vertx.codetrans.expression.StringLiteralModel;
 import io.vertx.codetrans.expression.VariableScope;
-import io.vertx.codetrans.expression.LambdaExpressionModel;
-import io.vertx.codetrans.MethodModel;
-import io.vertx.codetrans.RunnableCompilationUnit;
 import io.vertx.codetrans.statement.StatementModel;
 
 import java.util.Arrays;
@@ -44,31 +44,33 @@ class RubyCodeBuilder implements CodeBuilder {
   @Override
   public String render(RunnableCompilationUnit unit, RenderMode renderMode) {
     CodeWriter writer = newWriter();
-    for (ClassTypeInfo type : imports) {
-      requires.add(type.getModuleName() + "/" + Case.SNAKE.format(Case.CAMEL.parse(type.getSimpleName())));
-    }
-    for (String require : requires) {
-      writer.append("require '").append(require).append("'\n");
-    }
-    for (Map.Entry<String, StatementModel> field : unit.getFields().entrySet()) {
-      field.getValue().render(writer);
-      writer.append("\n");
-    }
-    for (Map.Entry<String, MethodModel> member : unit.getMethods().entrySet()) {
-      String methodName = Case.SNAKE.format(Case.CAMEL.parse(member.getKey()));
-      writer.append("def ").append(methodName).append("(");
-      for (Iterator<String> it = member.getValue().getParameterNames().iterator();it.hasNext();) {
-        String paramName = it.next();
-        writer.append(paramName);
-        if (it.hasNext()) {
-          writer.append(", ");
-        }
+    if (renderMode != RenderMode.SNIPPET) {
+      for (ClassTypeInfo type : imports) {
+        requires.add(type.getModuleName() + "/" + Case.SNAKE.format(Case.CAMEL.parse(type.getSimpleName())));
       }
-      writer.append(")\n");
-      writer.indent();
-      member.getValue().render(writer);
-      writer.unindent();
-      writer.append("end\n");
+      for (String require : requires) {
+        writer.append("require '").append(require).append("'\n");
+      }
+      for (Map.Entry<String, StatementModel> field : unit.getFields().entrySet()) {
+        field.getValue().render(writer);
+        writer.append("\n");
+      }
+      for (Map.Entry<String, MethodModel> member : unit.getMethods().entrySet()) {
+        String methodName = Case.SNAKE.format(Case.CAMEL.parse(member.getKey()));
+        writer.append("def ").append(methodName).append("(");
+        for (Iterator<String> it = member.getValue().getParameterNames().iterator(); it.hasNext(); ) {
+          String paramName = it.next();
+          writer.append(paramName);
+          if (it.hasNext()) {
+            writer.append(", ");
+          }
+        }
+        writer.append(")\n");
+        writer.indent();
+        member.getValue().render(writer);
+        writer.unindent();
+        writer.append("end\n");
+      }
     }
     unit.getMain().render(writer);
     return writer.getBuffer().toString();
